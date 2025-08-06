@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neural Digit Scanner</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700;900&family=Cormorant+Garamond:ital,wght@0,400;0,500;1,400;1,500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0a0a14;
+            --panel-bg: rgba(20, 20, 40, 0.8);
+            --royal-gold: #d4af37;
+            --royal-purple: #4b0082;
+            --royal-blue: #1a237e;
+            --deep-burgundy: #800020;
+            --silver: #c0c0c0;
+            --glow-intensity: 3px;
+        }
+        
+        @keyframes scanline {
+            0% {
+                transform: translateY(-100%);
+            }
+            100% {
+                transform: translateY(100%);
+            }
+        }
+        
+        @keyframes subtle-glow {
+            0%, 100% {
+                opacity: 0.95;
+                text-shadow: 0 0 var(--glow-intensity) var(--royal-gold);
+            }
+            50% {
+                opacity: 1;
+                text-shadow: 0 0 calc(var(--glow-intensity) * 1.5) var(--royal-gold);
+            }
+        }
+        
+        @keyframes elegant-pulse {
+            0% {
+                transform: scale(1);
+                box-shadow: 0 0 8px var(--royal-gold);
+            }
+            50% {
+                transform: scale(1.03);
+                box-shadow: 0 0 12px var(--royal-gold);
+            }
+            100% {
+                transform: scale(1);
+                box-shadow: 0 0 8px var(--royal-gold);
+            }
+        }
+        
+        body {
+            font-family: 'Cinzel', serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: var(--bg-color);
+            background-image: 
+                radial-gradient(circle at 10% 20%, rgba(75, 0, 130, 0.15) 0%, transparent 30%),
+                radial-gradient(circle at 90% 80%, rgba(26, 35, 126, 0.15) 0%, transparent 30%),
+                linear-gradient(rgba(10, 10, 20, 0.95), rgba(10, 10, 20, 0.95));
+            color: var(--silver);
+            overflow: hidden;
+        }
+        
+        body::before {
+            content: "";
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: url("data:image/svg+xml,%3Csvg width='20' height='20' viewBox='0 0 20 20' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1,1 L19,1 L19,19 L1,19 L1,1 Z' stroke='rgba(212, 175, 55, 0.05)' fill='none'/%3E%3C/svg%3E");
+            background-size: 40px 40px;
+            pointer-events: none;
+            z-index: 10;
+            opacity: 0.5;
+        }
+        
+        body::after {
+            content: "";
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, transparent, var(--royal-gold), transparent);
+            pointer-events: none;
+            z-index: 11;
+        }
+        
+        .container {
+            text-align: center;
+            background-color: var(--panel-bg);
+            backdrop-filter: blur(10px);
+            padding: 50px;
+            border-radius: 5px;
+            box-shadow: 
+                0 0 20px rgba(0, 0, 0, 0.5),
+                inset 0 0 15px rgba(212, 175, 55, 0.1);
+            border: 1px solid var(--royal-gold);
+            position: relative;
+            overflow: hidden;
+            max-width: 500px;
+            width: 90%;
+        }
+        
+        .container::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--royal-gold), transparent);
+            z-index: 1;
+        }
+        
+        h1 {
+            font-family: 'Cinzel', serif;
+            color: var(--royal-gold);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 30px;
+            text-shadow: 0 0 var(--glow-intensity) rgba(212, 175, 55, 0.3);
+            animation: subtle-glow 3s infinite alternate;
+            font-weight: 700;
+        }
+        
+        p {
+            color: var(--silver);
+            margin-bottom: 40px;
+            line-height: 1.6;
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 1.1em;
+            font-style: italic;
+        }
+        
+        .button {
+            display: inline-block;
+            padding: 12px 30px;
+            background-color: rgba(10, 10, 20, 0.7);
+            color: var(--royal-gold);
+            text-decoration: none;
+            border: 1px solid var(--royal-gold);
+            border-radius: 3px;
+            font-family: 'Cinzel', serif;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.4s ease;
+            box-shadow: 0 0 8px rgba(212, 175, 55, 0.3);
+            animation: elegant-pulse 4s infinite;
+        }
+        
+        .button::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(212, 175, 55, 0.1), transparent);
+            transition: all 0.8s ease;
+            z-index: -1;
+        }
+        
+        .button:hover {
+            box-shadow: 0 0 12px rgba(212, 175, 55, 0.5);
+            background-color: rgba(20, 20, 40, 0.9);
+            transform: translateY(-2px);
+        }
+        
+        .button:hover::before {
+            left: 100%;
+        }
+        
+        .royal-pattern {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M20,0 L40,20 L20,40 L0,20 Z' stroke='rgba(212, 175, 55, 0.03)' fill='none'/%3E%3C/svg%3E");
+            background-size: 60px 60px;
+            pointer-events: none;
+            z-index: -1;
+            opacity: 0.4;
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                padding: 30px;
+                width: 85%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="royal-pattern"></div>
+    <div class="container">
+        <h1>Royal Digit Analyzer</h1>
+        <p>Draw a digit and let our sophisticated neural network analyze your handwriting with precision and elegance</p>
+        <a href="/static/digit-recognition.html" class="button">Begin Analysis</a>
+    </div>
+    <script>
+        // Redirect to digit recognition page after a short delay
+        setTimeout(function() {
+            window.location.href = '/static/digit-recognition.html';
+        }, 1000);
+    </script>
+</body>
+</html>
