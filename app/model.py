@@ -18,6 +18,16 @@ class DigitRecognizer:
     def load_model(self):
         """Load the Keras model from the specified path."""
         try:
+            # Check if model file exists
+            if not os.path.exists(self.model_path):
+                logger.error(f"Model file not found at path: {self.model_path}")
+                logger.info(f"Current working directory: {os.getcwd()}")
+                logger.info(f"Directory contents: {os.listdir(os.path.dirname(self.model_path))}")
+                return False
+                
+            # Log model path for debugging
+            logger.info(f"Attempting to load model from: {self.model_path}")
+            
             # Load the model
             self.model = keras.models.load_model(self.model_path)
             
@@ -32,6 +42,9 @@ class DigitRecognizer:
             return True
         except Exception as e:
             logger.error(f"Error loading model: {str(e)}")
+            # Print stack trace for debugging
+            import traceback
+            logger.error(f"Stack trace: {traceback.format_exc()}")
             return False
     
     def predict_digit(self, image_data):
