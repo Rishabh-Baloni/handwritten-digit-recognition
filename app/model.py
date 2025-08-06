@@ -1,13 +1,20 @@
 import os
 import logging
+import time
 import numpy as np
 import tensorflow as tf
 from tensorflow import keras
 from .utils import preprocess_image
+import gc
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+# Configure TensorFlow for better performance
+tf.config.threading.set_inter_op_parallelism_threads(1)
+tf.config.threading.set_intra_op_parallelism_threads(2)
+tf.config.set_soft_device_placement(True)
 
 class DigitRecognizer:
     def __init__(self, model_path):
@@ -38,17 +45,47 @@ class DigitRecognizer:
             # Try loading with custom objects
             custom_objects = {'InputLayer': CustomInputLayer}
             
+            # Time the model loading
+            start_time = time.time()
             # Load the model with custom objects and compile=False to avoid jit_compile issues
             self.model = keras.models.load_model(self.model_path, custom_objects=custom_objects, compile=False)
+            load_time = time.time() - start_time
+            logger.info(f"Model loaded successfully in {load_time:.2f} seconds")
             
             # Log model summary
             self.model.summary(print_fn=logger.info)
             
-            # Verify the model works with a test prediction
+            # Perform multiple warm-up predictions to ensure TF optimization is complete
+            logger.info("Performing warm-up predictions to initialize TensorFlow optimizations...")
             test_input = np.zeros((1, 28, 28, 1))
-            test_prediction = self.model.predict(test_input)
+            
+            # First warm-up with eager execution
+            start_time = time.time()
+            logger.info("First warm-up prediction (eager execution)...")
+            test_prediction = self.model.predict(test_input, verbose=0)
+            first_pred_time = time.time() - start_time
+            logger.info(f"First warm-up prediction completed in {first_pred_time:.2f} seconds")
+            
+            # Second warm-up to ensure graph compilation
+            start_time = time.time()
+            logger.info("Second warm-up prediction (possible graph compilation)...")
+            test_prediction = self.model.predict(test_input, verbose=0)
+            second_pred_time = time.time() - start_time
+            logger.info(f"Second warm-up prediction completed in {second_pred_time:.2f} seconds")
+            
+            # Third warm-up for good measure
+            start_time = time.time()
+            logger.info("Third warm-up prediction (final optimization)...")
+            test_prediction = self.model.predict(test_input, verbose=0)
+            third_pred_time = time.time() - start_time
+            logger.info(f"Third warm-up prediction completed in {third_pred_time:.2f} seconds")
+            
+            # Run garbage collection to clean up memory
+            gc.collect()
+            
             logger.info(f"Successfully loaded and verified Keras model from {self.model_path}")
             logger.info(f"Model verification successful with output shape: {test_prediction.shape}")
+            logger.info("Model initialization complete and ready for predictions")
             return True
         except Exception as e:
             logger.error(f"Error loading model: {str(e)}")
@@ -61,14 +98,25 @@ class DigitRecognizer:
         """Predict the digit from the image data."""
         try:
             # Preprocess the image
+            start_preprocess = time.time()
             processed_image = preprocess_image(image_data)
+            preprocess_time = time.time() - start_preprocess
+            
             if processed_image is None:
                 return {"error": "Failed to process image"}
             
-            logger.info(f"Received prediction request with shape: {processed_image.shape}")
+            logger.info(f"Received prediction request with shape: {processed_image.shape} (preprocessing took {preprocess_time:.4f}s)")
             
-            # Make prediction using the Keras model
-            logits = self.model.predict(processed_image)[0]
+            # Make prediction using the Keras model with optimized settings
+            # Set verbose=0 to reduce logging overhead
+            start_time = time.time()
+            logger.info("Starting model prediction...")
+            
+            # Make prediction with optimized settings
+            logits = self.model.predict(processed_image, verbose=0)[0]
+            
+            prediction_time = time.time() - start_time
+            logger.info(f"Prediction completed in {prediction_time:.2f} seconds")
             logger.info(f"Raw logits: {logits}")
             
             # Convert logits to probabilities
@@ -79,10 +127,15 @@ class DigitRecognizer:
             predicted_digit = np.argmax(probabilities)
             confidence = float(probabilities[predicted_digit]) * 100
             
+            # Run garbage collection after prediction
+            gc.collect()
+            
             return {
                 "digit": int(predicted_digit),
                 "confidence": confidence,
-                "probabilities": [float(p) * 100 for p in probabilities]
+                "probabilities": [float(p) * 100 for p in probabilities],
+                "prediction_time_ms": int(prediction_time * 1000),
+                "preprocessing_time_ms": int(preprocess_time * 1000)
             }
         except Exception as e:
             logger.error(f"Error predicting digit: {str(e)}")

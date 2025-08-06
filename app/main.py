@@ -1,5 +1,9 @@
 import os
 import logging
+import time
+import gc
+import numpy as np
+import tensorflow as tf
 from fastapi import FastAPI, Request, HTTPException, Response
 from fastapi.responses import HTMLResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -82,6 +86,41 @@ async def health_check():
         "model_path_exists": os.path.exists(model_path)
     }
 
+@app.get("/test-prediction")
+async def test_prediction():
+    """Endpoint to test model prediction with a dummy input to ensure model is fully initialized."""
+    if digit_recognizer is None or digit_recognizer.model is None:
+        return {"status": "error", "model_loaded": False, "error": "Model not initialized"}
+    
+    try:
+        # Create a dummy input (all zeros)
+        test_input = np.zeros((1, 28, 28, 1))
+        
+        # Time the prediction
+        start_time = time.time()
+        logger.info("Running test prediction...")
+        
+        # Run prediction with verbose=0 to reduce logging
+        logits = digit_recognizer.model.predict(test_input, verbose=0)[0]
+        
+        # Calculate elapsed time
+        elapsed_time = time.time() - start_time
+        logger.info(f"Test prediction completed in {elapsed_time:.2f} seconds")
+        
+        # Convert logits to probabilities
+        probabilities = tf.nn.softmax(logits).numpy()
+        predicted_digit = np.argmax(probabilities)
+        
+        return {
+            "status": "ok",
+            "prediction_time_ms": int(elapsed_time * 1000),
+            "test_digit": int(predicted_digit),
+            "model_ready": True
+        }
+    except Exception as e:
+        logger.error(f"Error in test prediction: {str(e)}")
+        return {"status": "error", "error": str(e)}
+
 @app.post("/predict")
 async def predict_digit(image_request: ImageRequest):
     if not image_request.image:
@@ -90,7 +129,19 @@ async def predict_digit(image_request: ImageRequest):
     # Check if digit recognizer is initialized
     if digit_recognizer is None:
         logger.error("Digit recognizer not initialized")
-        raise HTTPException(status_code=500, detail="Model not initialized")
+        try:
+            logger.warning("Model not initialized, attempting to reload...")
+            global digit_recognizer
+            digit_recognizer = DigitRecognizer(model_path)
+            
+            # Run a test prediction to ensure model is ready
+            test_input = np.zeros((1, 28, 28, 1))
+            logger.info("Running test prediction after reload...")
+            digit_recognizer.model.predict(test_input, verbose=0)
+            logger.info("Test prediction after reload successful")
+        except Exception as e:
+            logger.error(f"Failed to reload model: {str(e)}")
+            raise HTTPException(status_code=500, detail="Model not initialized and reload failed")
     
     # Check if model is loaded
     if digit_recognizer.model is None:
@@ -103,13 +154,29 @@ async def predict_digit(image_request: ImageRequest):
             logger.error("Model reload failed before prediction")
             raise HTTPException(status_code=500, detail="Model not loaded and reload attempt failed")
     
-    # Process the prediction
-    result = digit_recognizer.predict_digit(image_request.image)
-    if "error" in result:
-        logger.error(f"Error in prediction: {result['error']}")
-        raise HTTPException(status_code=500, detail=result["error"])
-    
-    return result
+    try:
+        # Log request received timestamp
+        request_time = time.time()
+        logger.info(f"Prediction request received at {request_time}")
+        
+        # Process the prediction with timing
+        result = digit_recognizer.predict_digit(image_request.image)
+        
+        # Log total request processing time
+        total_time = time.time() - request_time
+        logger.info(f"Total prediction request processed in {total_time:.4f} seconds")
+        
+        # Add total processing time to the response
+        result["total_processing_time_ms"] = int(total_time * 1000)
+        
+        if "error" in result:
+            logger.error(f"Error in prediction: {result['error']}")
+            raise HTTPException(status_code=500, detail=result["error"])
+        
+        return result
+    except Exception as e:
+        logger.error(f"Error in prediction: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Prediction failed: {str(e)}")
 
 if __name__ == "__main__":
     uvicorn.run("app.main:app", host="0.0.0.0", port=8000, reload=True)
