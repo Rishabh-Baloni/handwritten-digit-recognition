@@ -85,7 +85,7 @@ This application can be easily deployed to platforms like Render, Railway, or He
        startCommand: gunicorn app.main:app --workers 1 --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT
        envVars:
          - key: PYTHON_VERSION
-           value: 3.13.4
+           value: 3.11.8
    ```
 
 2. Or set the start command in the Render dashboard to:
