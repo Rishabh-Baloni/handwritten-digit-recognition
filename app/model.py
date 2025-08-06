@@ -28,8 +28,18 @@ class DigitRecognizer:
             # Log model path for debugging
             logger.info(f"Attempting to load model from: {self.model_path}")
             
-            # Load the model
-            self.model = keras.models.load_model(self.model_path)
+            # Define custom InputLayer to handle batch_shape parameter
+            class CustomInputLayer(tf.keras.layers.InputLayer):
+                def __init__(self, batch_shape=None, **kwargs):
+                    if batch_shape is not None:
+                        kwargs['input_shape'] = batch_shape[1:]
+                    super().__init__(**kwargs)
+            
+            # Try loading with custom objects
+            custom_objects = {'InputLayer': CustomInputLayer}
+            
+            # Load the model with custom objects
+            self.model = keras.models.load_model(self.model_path, custom_objects=custom_objects)
             
             # Log model summary
             self.model.summary(print_fn=logger.info)
