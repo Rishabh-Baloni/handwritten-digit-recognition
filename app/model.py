@@ -38,8 +38,8 @@ class DigitRecognizer:
             # Try loading with custom objects
             custom_objects = {'InputLayer': CustomInputLayer}
             
-            # Load the model with custom objects
-            self.model = keras.models.load_model(self.model_path, custom_objects=custom_objects)
+            # Load the model with custom objects and compile=False to avoid jit_compile issues
+            self.model = keras.models.load_model(self.model_path, custom_objects=custom_objects, compile=False)
             
             # Log model summary
             self.model.summary(print_fn=logger.info)

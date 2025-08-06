@@ -25,7 +25,7 @@ try:
     except Exception as e:
         print(f"Standard loading failed: {str(e)}")
     
-    # Attempt 2: With custom object scope to handle batch_shape
+    # Attempt 2: With custom InputLayer handling
     print("\nAttempt 2: With custom InputLayer handling")
     
     # Custom InputLayer to handle batch_shape
@@ -34,11 +34,22 @@ try:
             if batch_shape is not None:
                 kwargs['input_shape'] = batch_shape[1:]
             super().__init__(**kwargs)
+        
+        def compute_output_shape(self, input_shape):
+            return input_shape
+        
+        def call(self, inputs):
+            return inputs
+        
+        def get_config(self):
+            config = super().get_config()
+            return config
     
     # Try loading with custom objects
     custom_objects = {'InputLayer': CustomInputLayer}
     try:
-        model = tf.keras.models.load_model(model_path, custom_objects=custom_objects)
+        # Try to load with compile=False to avoid jit_compile issues
+        model = tf.keras.models.load_model(model_path, custom_objects=custom_objects, compile=False)
         print("Loading with custom objects successful!")
         # Print model summary
         model.summary()
