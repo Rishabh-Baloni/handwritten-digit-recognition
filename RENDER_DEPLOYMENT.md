@@ -1,6 +1,6 @@
 # Optimizing Render Deployment for TensorFlow Applications
 
-This guide provides instructions for optimizing the deployment of TensorFlow-based applications on Render, specifically addressing the worker timeout issue during the first prediction request.
+This guide provides instructions for optimizing the deployment of TensorFlow-based applications on Render, specifically addressing common issues such as worker timeouts, syntax errors, and model initialization problems.
 
 ## Common Issues with TensorFlow on Render
 
@@ -16,9 +16,33 @@ This guide provides instructions for optimizing the deployment of TensorFlow-bas
    - After periods of inactivity, Render may spin down your service
    - Subsequent requests trigger a cold start, which includes model loading and initialization
 
+4. **Python Syntax Errors**
+   - Syntax errors in your code will prevent the application from starting
+   - Common issues include incorrect indentation, missing parentheses, and improper use of global variables
+
 ## Optimizations Implemented
 
-### 1. Enhanced Model Warm-up
+### 1. Python Syntax Error Fixes
+
+A common syntax error with global variables has been fixed in the application code:
+
+```python
+# INCORRECT: Using a variable before declaring it global
+def some_function():
+    if digit_recognizer is None:  # Using the variable
+        # Some code...
+        global digit_recognizer  # Too late! This should be at the top
+        digit_recognizer = DigitRecognizer(model_path)
+
+# CORRECT: Declaring the variable as global at the beginning of the function
+def some_function():
+    global digit_recognizer  # Correct placement at the top of the function
+    if digit_recognizer is None:
+        # Some code...
+        digit_recognizer = DigitRecognizer(model_path)
+```
+
+### 2. Enhanced Model Warm-up
 
 The model initialization process now includes multiple warm-up predictions to ensure TensorFlow optimizations are fully applied:
 
@@ -36,7 +60,7 @@ model.predict(test_input, verbose=0)
 model.predict(test_input, verbose=0)
 ```
 
-### 2. Increased Gunicorn Timeout
+### 3. Increased Gunicorn Timeout
 
 The Gunicorn worker timeout has been increased to 120 seconds to accommodate the longer initialization time:
 
@@ -44,7 +68,7 @@ The Gunicorn worker timeout has been increased to 120 seconds to accommodate the
 gunicorn app.main:app --workers 1 --worker-class uvicorn.workers.UvicornWorker --timeout 120 --bind 0.0.0.0:$PORT
 ```
 
-### 3. TensorFlow Optimization Environment Variables
+### 4. TensorFlow Optimization Environment Variables
 
 Environment variables have been added to optimize TensorFlow performance:
 
@@ -57,7 +81,7 @@ ENV PYTHONUNBUFFERED=1 \
     MALLOC_TRIM_THRESHOLD_=65536
 ```
 
-### 4. Startup Script
+### 5. Startup Script
 
 A startup script (`startup.sh`) has been created to pre-initialize the model before the application starts handling requests:
 
@@ -71,7 +95,7 @@ python -c "import tensorflow as tf; ..."
 exec gunicorn app.main:app --workers 1 --worker-class uvicorn.workers.UvicornWorker --timeout 120 --bind 0.0.0.0:$PORT
 ```
 
-### 5. Test Prediction Endpoint
+### 6. Test Prediction Endpoint
 
 A new endpoint (`/test-prediction`) has been added to manually trigger a test prediction and ensure the model is fully initialized:
 
@@ -125,8 +149,24 @@ GET /test-prediction
 3. **Limit Batch Size**
    - Ensure prediction batch sizes are kept small
 
+### Syntax Errors
+
+1. **Check Render Logs**
+   - Examine the deployment logs in the Render dashboard for detailed error messages
+   - Look for `SyntaxError` messages that indicate code issues
+
+2. **Global Variable Declarations**
+   - Ensure all `global` declarations are at the beginning of functions
+   - Python requires global variables to be declared before they are used in a function
+
+3. **Local Testing**
+   - Test your application locally before deploying to Render
+   - Use `python -m app.main` to check for syntax errors
+
 ## Additional Resources
 
 - [Render Documentation](https://render.com/docs)
 - [TensorFlow Performance Guide](https://www.tensorflow.org/guide/performance/overview)
 - [Gunicorn Configuration](https://docs.gunicorn.org/en/stable/settings.html)
+- [Python Global Variables](https://docs.python.org/3/faq/programming.html#what-are-the-rules-for-local-and-global-variables-in-python)
+- [Python Syntax Errors](https://docs.python.org/3/tutorial/errors.html)

@@ -127,11 +127,11 @@ async def predict_digit(image_request: ImageRequest):
         raise HTTPException(status_code=400, detail="No image data provided")
     
     # Check if digit recognizer is initialized
+    global digit_recognizer
     if digit_recognizer is None:
         logger.error("Digit recognizer not initialized")
         try:
             logger.warning("Model not initialized, attempting to reload...")
-            global digit_recognizer
             digit_recognizer = DigitRecognizer(model_path)
             
             # Run a test prediction to ensure model is ready
