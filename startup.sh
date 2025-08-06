@@ -72,4 +72,4 @@ print('Model initialization complete!')
 echo "Initialization complete, starting application..."
 
 # Start the application with the command from render.yaml
-exec gunicorn app.main:app --workers 1 --worker-class uvicorn.workers.UvicornWorker --timeout 120 --bind 0.0.0.0:$PORT
+exec gunicorn app.main:app --workers 1 --worker-class uvicorn.workers.UvicornWorker --timeout 120 --graceful-timeout 120 --bind 0.0.0.0:$PORT
