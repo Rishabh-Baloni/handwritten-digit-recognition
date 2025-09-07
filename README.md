@@ -1,5 +1,7 @@
 # 🔢 Handwritten Digit Recognition
 
+<a href="https://github.com/Rishabh-Baloni/handwritten-digit-recognition"><img src="images/screenshot.png"></a>
+
 A modern web application that recognizes handwritten digits (0-9) using a trained neural network model. Draw digits on an interactive HTML5 canvas and get instant AI predictions with confidence scores!
 
 ![Demo](https://img.shields.io/badge/Demo-Flask-green?style=for-the-badge)
