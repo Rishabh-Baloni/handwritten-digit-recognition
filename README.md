@@ -1,28 +1,34 @@
 # 🔢 Handwritten Digit Recognition
 
-A simple web application that recognizes handwritten digits (0-9) using a trained neural network model. Draw a digit on the canvas and get instant predictions!
+A modern web application that recognizes handwritten digits (0-9) using a trained neural network model. Draw digits on an interactive HTML5 canvas and get instant AI predictions with confidence scores!
 
-![Demo](https://img.shields.io/badge/Demo-Streamlit-red?style=for-the-badge)
+![Demo](https://img.shields.io/badge/Demo-Flask-green?style=for-the-badge)
 ![Python](https://img.shields.io/badge/Python-3.8+-blue?style=for-the-badge)
 ![TensorFlow](https://img.shields.io/badge/TensorFlow-2.13+-orange?style=for-the-badge)
 
 ## 🚀 Features
 
-- **Interactive Drawing Canvas**: Draw digits directly in your browser
-- **Real-time Predictions**: Get instant predictions as you draw
+- **Interactive HTML5 Canvas**: Draw digits directly in your browser with mouse or touch
+- **Real-time Predictions**: Get instant predictions with confidence scores
 - **High Accuracy**: Uses a trained CNN model for accurate digit recognition
-- **Clean Interface**: Simple, user-friendly web interface
-- **Confidence Scores**: See how confident the model is about its predictions
+- **Modern Web Interface**: Beautiful, responsive design that works on all devices
+- **Confidence Visualization**: See prediction confidence with charts and progress bars
+- **Touch Support**: Works perfectly on tablets and mobile devices
 
 ## 📁 Project Structure
 
 ```
 handwritten-digit-recognition/
-├── app.py              # Main Streamlit application
+├── app.py              # Flask web application
+├── templates/
+│   └── index.html      # Modern web interface
 ├── my_model.keras      # Trained neural network model
+├── notebooks/          # Jupyter notebooks for training & analysis
+│   └── README.md       # Notebook documentation
 ├── requirements.txt    # Python dependencies
 ├── README.md          # Project documentation
-└── run.bat            # Windows run script (optional)
+├── run.bat            # Windows run script
+└── run.sh             # Linux/Mac run script
 ```
 
 ## 🛠️ Installation & Setup
@@ -36,7 +42,7 @@ handwritten-digit-recognition/
 #### Windows Users:
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/yourusername/handwritten-digit-recognition.git
+   git clone https://github.com/Rishabh-Baloni/handwritten-digit-recognition.git
    cd handwritten-digit-recognition
    ```
 
@@ -48,12 +54,16 @@ handwritten-digit-recognition/
    - Create a virtual environment (venv folder)
    - Install all dependencies in the virtual environment
    - Start the application
+   This will:
+   - Create a virtual environment (venv folder)
+   - Install all dependencies in the virtual environment
+   - Start the Flask application
    - **Nothing gets installed globally on your system!**
 
 #### Linux/Mac Users:
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/yourusername/handwritten-digit-recognition.git
+   git clone https://github.com/Rishabh-Baloni/handwritten-digit-recognition.git
    cd handwritten-digit-recognition
    ```
 
@@ -83,8 +93,11 @@ If you prefer manual setup:
 
 4. **Run the application**
    ```bash
-   streamlit run app.py
+   python app.py
    ```
+
+5. **Open your browser**
+   The app will be available at `http://localhost:5000`
 
 ### 🔒 Virtual Environment Benefits
 - **Isolated Environment**: All packages install in the `venv` folder
@@ -105,22 +118,76 @@ If you prefer manual setup:
 - Make the digit fill most of the drawing area
 - Use continuous strokes when possible
 
+## 📊 Dataset Information
+
+### MNIST Handwritten Digits Dataset
+
+This project uses the **MNIST dataset** for training and testing the digit recognition model.
+
+#### Dataset Details:
+- **Total Samples**: 70,000 handwritten digit images
+- **Training Set**: 60,000 images
+- **Test Set**: 10,000 images
+- **Image Format**: 28x28 pixels, grayscale
+- **Classes**: 10 digits (0-9)
+- **File Size**: ~50-60 MB (compressed)
+
+#### How to Get the Dataset:
+
+**Option 1: Automatic Download (Recommended)**
+```python
+import tensorflow as tf
+
+# Automatically downloads and loads MNIST
+(x_train, y_train), (x_test, y_test) = tf.keras.datasets.mnist.load_data()
+```
+
+**Option 2: Manual Download**
+- **Official Source**: http://yann.lecun.com/exdb/mnist/
+- **Kaggle**: https://www.kaggle.com/datasets/hojjatk/mnist-dataset
+- **Alternative**: https://github.com/zalandoresearch/fashion-mnist (Fashion-MNIST variant)
+
+#### Dataset Files Structure:
+```
+MNIST Dataset:
+├── train-images-idx3-ubyte  # Training images (60,000)
+├── train-labels-idx1-ubyte  # Training labels (60,000)
+├── t10k-images-idx3-ubyte   # Test images (10,000)
+└── t10k-labels-idx1-ubyte   # Test labels (10,000)
+```
+
+**Note**: The dataset is not included in this repository due to GitHub file size limitations. The training notebooks automatically handle dataset downloading and preprocessing.
+
 ## 🧠 Model Information
 
 - **Architecture**: Convolutional Neural Network (CNN)
-- **Training Dataset**: MNIST handwritten digits
+- **Training Dataset**: MNIST handwritten digits (60,000 training samples)
 - **Input Size**: 28x28 grayscale images
 - **Output**: 10 classes (digits 0-9)
 - **Performance**: High accuracy on handwritten digit recognition
+- **Training Code**: Available in `notebooks/` folder
+
+### Model Training
+
+The model was trained using Jupyter notebooks located in the `notebooks/` folder. The training process includes:
+
+1. **Data Download**: Automatic MNIST dataset download via `tf.keras.datasets.mnist.load_data()`
+2. **Data Preprocessing**: Normalization and reshaping for CNN input
+3. **Model Architecture**: CNN with convolutional, pooling, and dense layers
+4. **Training**: Adam optimizer with categorical crossentropy loss
+5. **Validation**: Performance evaluation on separate test set
+6. **Model Export**: Saving trained model as `my_model.keras`
+
+To retrain the model or explore the training process, check the Jupyter notebooks in the `notebooks/` directory.
 
 ## 🔧 Technical Details
 
 ### Dependencies
-- **Streamlit**: Web framework for the user interface
+- **Flask**: Web framework for the backend API
 - **TensorFlow**: Machine learning framework for model inference
 - **NumPy**: Numerical computing for image processing
 - **Pillow**: Image processing library
-- **streamlit-drawable-canvas**: Interactive drawing component
+- **HTML5 Canvas**: Interactive drawing interface
 
 ### Image Processing Pipeline
 1. Capture drawing from canvas

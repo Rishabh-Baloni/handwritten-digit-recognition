@@ -1,0 +1,1612 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Handwritten Digit Recognition</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-color: #ffffff;
+            --bg-primary: #000000;
+            --bg-secondary: #1a1a1a;
+            --text-primary: #ffffff;
+            --text-secondary: #cccccc;
+            --border-radius: 12px;
+            --border-radius-lg: 16px;
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #000000 0%, #1a1a1a 50%, #000000 100%);
+            min-height: 100vh;
+            color: var(--text-primary);
+            line-height: 1.6;
+        }
+
+        .header {
+            background: rgba(0, 0, 0, 0.9);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 1rem 0;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            text-align: center;
+            padding: 0 2rem;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            font-weight: 900;
+            background: linear-gradient(135deg, #ffffff, #cccccc);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: 1px;
+        }
+
+        .footer {
+            background: rgba(0, 0, 0, 0.9);
+            backdrop-filter: blur(10px);
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 1rem 0;
+            text-align: center;
+            margin-top: 2rem;
+        }
+
+        .footer-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 2rem;
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+        }
+
+        .footer a {
+            color: var(--accent-primary);
+            text-decoration: none;
+            font-weight: 800;
+            transition: color 0.3s ease;
+        }
+
+        .footer a:hover {
+            color: #ffffff;
+            text-shadow: 0 0 8px rgba(59, 130, 246, 0.6);
+        }
+
+        .main-wrapper {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: calc(100vh - 80px);
+            padding: 2rem;
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 2rem;
+            max-width: 1400px;
+            width: 100%;
+        }
+
+        .drawing-panel {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: var(--border-radius-lg);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+            padding: 1.5rem 1.5rem 0.5rem 1.5rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            transition: var(--transition);
+        }
+
+        .drawing-panel:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.6);
+        }
+
+        .panel-header {
+            text-align: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .panel-header h3 {
+            font-size: 1.6rem;
+            color: var(--text-primary);
+            font-weight: 800;
+            letter-spacing: 0.5px;
+        }
+
+        .canvas-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .drawing-area {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        /* Tools Sidebar */
+        .tools-sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+            padding: 1rem;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: var(--border-radius-lg);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            min-width: 80px;
+            height: 320px; /* Match canvas height */
+            justify-content: space-evenly;
+        }
+
+        /* Brush Controls (Enhanced sleek horizontal layout below canvas) */
+        .brush-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 1rem;
+            padding: 0.75rem 1.2rem;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02));
+            border-radius: var(--border-radius-lg);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(15px);
+            margin-top: 1rem;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            height: 60px;
+            width: 100%;
+        }
+
+        .brush-controls::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.05), rgba(147, 51, 234, 0.05));
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+        }
+
+        .brush-controls:hover::before {
+            opacity: 1;
+        }
+
+        .brush-controls:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 25px rgba(0, 0, 0, 0.4);
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .brush-control-group {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            padding: 0.4rem 1rem;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: var(--border-radius);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+            height: 40px;
+            flex: 1;
+        }
+
+        .brush-control-group:nth-child(2) {
+            flex: 1.1;
+        }
+
+        .brush-control-group:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(59, 130, 246, 0.3);
+            transform: scale(1.02);
+        }
+
+        .control-label {
+            font-size: 0.7rem;
+            color: var(--text-primary);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            white-space: nowrap;
+            min-width: 60px;
+            flex-shrink: 0;
+        }
+
+        .brush-control-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            flex: 1;
+            min-width: 0;
+        }
+
+        .brush-size-slider-horizontal {
+            width: 100%;
+            height: 4px;
+            background: linear-gradient(to right, rgba(255, 255, 255, 0.2), rgba(59, 130, 246, 0.3));
+            border-radius: 2px;
+            outline: none;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            flex: 1;
+            min-width: 60px;
+        }
+
+        .brush-size-slider-horizontal:hover {
+            background: linear-gradient(to right, rgba(255, 255, 255, 0.3), rgba(59, 130, 246, 0.5));
+            transform: scaleX(1.05);
+        }
+
+        .brush-size-slider-horizontal::-webkit-slider-thumb {
+            appearance: none;
+            width: 12px;
+            height: 12px;
+            background: linear-gradient(135deg, var(--accent-primary), #2563eb);
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 2px 6px rgba(59, 130, 246, 0.4);
+            transition: all 0.3s ease;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .brush-size-slider-horizontal::-webkit-slider-thumb:hover {
+            transform: scale(1.1);
+            box-shadow: 0 3px 10px rgba(59, 130, 246, 0.6);
+        }
+
+        .brush-size-slider-horizontal::-moz-range-thumb {
+            width: 12px;
+            height: 12px;
+            background: linear-gradient(135deg, var(--accent-primary), #2563eb);
+            border-radius: 50%;
+            cursor: pointer;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 2px 6px rgba(59, 130, 246, 0.4);
+            transition: all 0.3s ease;
+        }
+
+        .brush-type-selector-horizontal {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
+            color: #ffffff;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 0;
+            border-radius: var(--border-radius);
+            font-size: 0.7rem;
+            font-weight: 600;
+            cursor: pointer;
+            min-width: 80px;
+            max-width: 90px;
+            width: auto;
+            text-align: left;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+            height: 26px;
+            flex: 0 0 auto;
+            box-sizing: border-box;
+        }
+
+        .brush-type-selector-horizontal:hover {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.08));
+            border-color: var(--accent-primary);
+            transform: scale(1.02);
+        }
+
+        .brush-type-selector-horizontal:focus {
+            outline: none;
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+        }
+
+        .brush-type-selector-horizontal option {
+            background: #ffffff;
+            color: #000000;
+            padding: 0;
+            width: 100%;
+            height: auto;
+            min-height: 30px;
+            display: block;
+            box-sizing: border-box;
+            text-align: left;
+            margin: 0;
+            border: none;
+        }
+
+        .brush-type-selector-horizontal option:checked,
+        .brush-type-selector-horizontal option:selected {
+            background: var(--accent-primary);
+            color: #ffffff;
+        }
+
+        /* Force equal padding for dropdown */
+        select.brush-type-selector-horizontal {
+            text-indent: 0;
+            padding-left: 0 !important;
+            padding-right: 0 !important;
+        }
+
+        /* Additional styling for dropdown options */
+        .brush-type-selector-horizontal option {
+            padding-left: 0 !important;
+            padding-right: 0 !important;
+        }
+
+        .brush-size-display {
+            font-size: 0.7rem;
+            color: var(--accent-primary);
+            font-weight: 600;
+            min-width: 38px;
+            text-align: center;
+            background: rgba(59, 130, 246, 0.1);
+            padding: 0.2rem 0.4rem;
+            border-radius: 3px;
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            font-family: 'Courier New', monospace;
+        }
+
+        .tool-section {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            align-items: center;
+            flex: 1;
+            justify-content: center;
+        }
+
+        .tool-section:not(:last-child) {
+            border-bottom: none;
+            padding-bottom: 0;
+        }
+
+        /* Predict Section */
+        .predict-section {
+            display: flex;
+            justify-content: center;
+            width: 100%;
+        }
+
+        .canvas-wrapper {
+            position: relative;
+            border-radius: var(--border-radius);
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        #drawingCanvas {
+            display: block;
+            cursor: crosshair;
+            background: #ffffff;
+            width: 320px;
+            height: 320px;
+            border-radius: var(--border-radius);
+        }
+
+        /* Legacy styles - keeping minimal for compatibility */
+
+        /* Primary Action Button - Predict Digit */
+        .btn-primary {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+            border: none;
+            padding: 1rem 2rem;
+            border-radius: var(--border-radius);
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            min-width: 200px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #059669, #047857);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+        }
+
+        .btn-primary:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 10px rgba(16, 185, 129, 0.3);
+        }
+
+        /* Secondary Action Buttons */
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-primary);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 0.6rem 1rem;
+            border-radius: var(--border-radius);
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+            min-width: 100px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.4rem;
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.15);
+            border-color: rgba(255, 255, 255, 0.3);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Tool Buttons */
+        .tool-btn {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-primary);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 0.75rem;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+        }
+
+        .tool-btn:hover {
+            background: rgba(255, 255, 255, 0.15);
+            border-color: rgba(255, 255, 255, 0.3);
+            transform: translateY(-1px);
+        }
+
+        .tool-btn.active {
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+            border-color: #3b82f6;
+            color: white;
+            box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);
+        }
+
+        .tool-btn.btn-clear:hover {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            border-color: #ef4444;
+            color: white;
+        }
+
+        .brush-controls {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            justify-content: center;
+        }
+
+        .brush-size-label {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            min-width: 35px;
+        }
+
+        .brush-type-selector {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-primary);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 0.4rem;
+            border-radius: var(--border-radius);
+            font-size: 0.85rem;
+            cursor: pointer;
+            min-width: 75px;
+        }
+
+        .brush-size-slider {
+            width: 80px;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 2px;
+            outline: none;
+            cursor: pointer;
+        }
+
+        .brush-size-slider::-webkit-slider-thumb {
+            width: 16px;
+            height: 16px;
+            background: #10b981;
+            border-radius: 50%;
+            cursor: pointer;
+            border: none;
+            -webkit-appearance: none;
+        }
+
+        .brush-size-slider::-moz-range-thumb {
+            width: 16px;
+            height: 16px;
+            background: #10b981;
+            border-radius: 50%;
+            cursor: pointer;
+            border: none;
+        }
+
+        .brush-size-display {
+            font-size: 0.8rem;
+            color: var(--text-primary);
+            font-weight: 600;
+            min-width: 20px;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.875rem 1.75rem;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: var(--border-radius);
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: var(--transition);
+            text-decoration: none;
+            outline: none;
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-primary);
+            backdrop-filter: blur(10px);
+        }
+
+        .btn-predict {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
+            color: white;
+            border-color: rgba(255, 255, 255, 0.3);
+        }
+
+        .btn-predict:hover {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.1));
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        }
+
+        .btn-clear {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02));
+            color: #ff6b6b;
+            border-color: rgba(255, 107, 107, 0.3);
+        }
+
+        .btn-clear:hover {
+            background: linear-gradient(135deg, rgba(255, 107, 107, 0.2), rgba(255, 107, 107, 0.1));
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        }
+
+        .btn-secondary {
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .btn-secondary:hover {
+            background: var(--bg-secondary);
+            transform: translateY(-2px);
+        }
+
+        .btn-icon {
+            padding: 0.75rem;
+            aspect-ratio: 1;
+        }
+
+        /* Prediction result display */
+        .result-display {
+            margin-top: 1.5rem;
+            padding: 1rem;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: var(--border-radius);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            text-align: center;
+            display: none;
+        }
+
+        .result-display.show {
+            display: block;
+        }
+
+        .predicted-digit {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #10b981;
+            margin-bottom: 0.5rem;
+        }
+
+        .confidence {
+            font-size: 1rem;
+            color: var(--text-secondary);
+        }
+
+        /* Histogram Panel Styles */
+        .histogram-panel {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: var(--border-radius-lg);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+            padding: 2rem 2rem 0.5rem 2rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            transition: var(--transition);
+            image-rendering: crisp-edges;
+            image-rendering: -webkit-optimize-contrast;
+            image-rendering: pixelated;
+        }
+
+        .histogram-panel:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.6);
+        }
+
+        .prediction-result {
+            text-align: center;
+            margin-bottom: 1.5rem;
+            padding: 1rem;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: var(--border-radius);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: opacity 0.3s ease;
+        }
+
+        .prediction-result.placeholder {
+            opacity: 0.5;
+        }
+
+        .prediction-result.active {
+            opacity: 1;
+        }
+
+        .predicted-label {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #10b981;
+            margin-bottom: 0.5rem;
+            text-shadow: 0 2px 10px rgba(16, 185, 129, 0.3);
+            transition: color 0.3s ease;
+        }
+
+        .predicted-label.placeholder {
+            color: #666666;
+            text-shadow: none;
+        }
+
+        .predicted-confidence {
+            font-size: 1.2rem;
+            color: var(--text-secondary);
+            transition: color 0.3s ease;
+        }
+
+        .predicted-confidence.placeholder {
+            color: #555555;
+        }
+
+        .chart-container {
+            height: 350px;
+            position: relative;
+            margin-top: 3rem;
+        }
+
+        .chart-grid {
+            position: absolute;
+            top: 0;
+            left: 60px;
+            right: 20px;
+            bottom: 60px;
+            border-left: 2px solid rgba(255, 255, 255, 0.2);
+            border-bottom: 2px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .chart-grid::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-image: 
+                repeating-linear-gradient(
+                    to top,
+                    transparent 0%,
+                    transparent calc(20% - 0.5px),
+                    rgba(255, 255, 255, 0.2) 20%,
+                    rgba(255, 255, 255, 0.2) calc(20% + 0.5px),
+                    transparent calc(20% + 0.5px),
+                    transparent calc(40% - 0.5px),
+                    rgba(255, 255, 255, 0.2) 40%,
+                    rgba(255, 255, 255, 0.2) calc(40% + 0.5px),
+                    transparent calc(40% + 0.5px),
+                    transparent calc(60% - 0.5px),
+                    rgba(255, 255, 255, 0.2) 60%,
+                    rgba(255, 255, 255, 0.2) calc(60% + 0.5px),
+                    transparent calc(60% + 0.5px),
+                    transparent calc(80% - 0.5px),
+                    rgba(255, 255, 255, 0.2) 80%,
+                    rgba(255, 255, 255, 0.2) calc(80% + 0.5px),
+                    transparent calc(80% + 0.5px),
+                    transparent 100%
+                );
+        }
+
+        .histogram-bars {
+            position: absolute;
+            bottom: 60px;
+            left: 70px;
+            right: 30px;
+            height: calc(100% - 60px);
+            display: flex;
+            align-items: end;
+            justify-content: space-between;
+            gap: 6px;
+            image-rendering: crisp-edges;
+            image-rendering: -webkit-optimize-contrast;
+            image-rendering: pixelated;
+        }
+
+        .histogram-bar {
+            background: linear-gradient(to top, rgba(255, 255, 255, 0.8), rgba(255, 255, 255, 0.4));
+            border-radius: 4px 4px 0 0;
+            transition: all 0.4s ease;
+            position: relative;
+            min-width: 24px;
+            cursor: pointer;
+            border: 2px solid transparent;
+            image-rendering: crisp-edges;
+            image-rendering: -webkit-optimize-contrast;
+            image-rendering: pixelated;
+        }
+
+        .histogram-bar.predicted {
+            background: linear-gradient(to top, rgba(16, 185, 129, 0.9), rgba(16, 185, 129, 0.5));
+            border-color: rgba(16, 185, 129, 0.8);
+            box-shadow: 0 4px 20px rgba(16, 185, 129, 0.4);
+        }
+
+        .histogram-bar:hover {
+            background: linear-gradient(to top, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.6));
+            transform: scaleX(1.1);
+        }
+
+        .histogram-bar.predicted:hover {
+            background: linear-gradient(to top, rgba(16, 185, 129, 1), rgba(16, 185, 129, 0.7));
+        }
+
+        .bar-label {
+            position: absolute;
+            bottom: -30px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 1rem;
+            color: var(--text-primary);
+            font-weight: 600;
+        }
+
+        .bar-value {
+            position: absolute;
+            top: -30px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 0.8rem;
+            color: var(--text-primary);
+            font-weight: 600;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 2px 6px;
+            border-radius: 4px;
+            white-space: nowrap;
+            opacity: 1;
+            transition: all 0.3s ease;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            z-index: 10;
+        }
+
+        .histogram-bar.predicted .bar-value {
+            background: rgba(16, 185, 129, 0.9);
+            color: white;
+            border-color: rgba(16, 185, 129, 0.8);
+        }
+
+        .y-axis-labels {
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 60px;
+            width: 55px;
+            padding-right: 8px;
+        }
+
+        .y-label {
+            position: absolute;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            line-height: 1;
+            font-weight: 500;
+            right: 8px;
+            transform: translateY(-50%);
+            text-align: right;
+            background: var(--bg-primary);
+            padding: 2px 4px;
+            border-radius: 2px;
+        }
+
+        .chart-title {
+            text-align: center;
+            margin-bottom: 1rem;
+            font-size: 1.1rem;
+            color: var(--text-primary);
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-content">
+            <h1><i class="fas fa-brain"></i> HANDWRITTEN DIGIT RECOGNITION</h1>
+        </div>
+    </header>
+
+    <!-- Main Wrapper -->
+    <div class="main-wrapper">
+        <!-- Main Container -->
+        <main class="container">
+            <!-- Drawing Panel -->
+            <div class="drawing-panel">
+                <div class="panel-header">
+                    <h3><i class="fas fa-pencil-alt"></i> DRAW YOUR DIGIT</h3>
+                </div>
+                <div class="canvas-container">
+                    <div class="drawing-area">
+                        <!-- Tools Sidebar -->
+                        <div class="tools-sidebar">
+                            <!-- Drawing Tools -->
+                            <div class="tool-section">
+                                <button class="tool-btn active" id="brushTool" onclick="selectTool('brush')" title="Brush Tool">
+                                    <i class="fas fa-paint-brush"></i>
+                                </button>
+                                <button class="tool-btn" id="eraserTool" onclick="selectTool('eraser')" title="Eraser Tool">
+                                    <i class="fas fa-eraser"></i>
+                                </button>
+                            </div>
+
+                            <!-- Action Tools -->
+                            <div class="tool-section">
+                                <button class="tool-btn" onclick="undoLastStroke()" title="Undo Last Stroke">
+                                    <i class="fas fa-undo-alt"></i>
+                                </button>
+                                <button class="tool-btn" onclick="redoLastStroke()" title="Redo Last Stroke">
+                                    <i class="fas fa-redo-alt"></i>
+                                </button>
+                                <button class="tool-btn btn-clear" onclick="clearCanvas()" title="Clear Canvas">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Canvas Area -->
+                        <div class="canvas-wrapper">
+                            <canvas id="drawingCanvas" width="320" height="320"></canvas>
+                        </div>
+                    </div>
+                    
+                    <!-- Brush Controls Below Canvas -->
+                    <div class="brush-controls">
+                        <div class="brush-control-group">
+                            <label class="control-label">Brush Size</label>
+                            <div class="brush-control-wrapper">
+                                <input type="range" class="brush-size-slider-horizontal" id="brushSize" min="2" max="20" value="8" onchange="updateBrushSize(this.value)">
+                                <span class="brush-size-display" id="brushSizeDisplay">08px</span>
+                            </div>
+                        </div>
+                        <div class="brush-control-group">
+                            <label class="control-label">Brush Type</label>
+                            <div class="brush-control-wrapper">
+                                <select class="brush-type-selector-horizontal" id="brushType" onchange="updateBrushType(this.value)">
+                                    <option value="round">● Round</option>
+                                    <option value="square">■ Square</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Predict Button Below Canvas -->
+                    <div class="predict-section">
+                        <button class="btn-primary" onclick="predictDigit()">
+                            <i class="fas fa-magic"></i>
+                            Predict Digit
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Histogram Panel -->
+            <div class="histogram-panel">
+                <div class="panel-header">
+                    <h3><i class="fas fa-chart-bar"></i> PREDICTION CONFIDENCE</h3>
+                </div>
+                
+                <!-- Big Prediction Result -->
+                <div id="predictionResult" class="prediction-result placeholder">
+                    <div class="predicted-label placeholder" id="bigPredictedDigit">Predicted: None</div>
+                    <div class="predicted-confidence placeholder" id="bigConfidenceValue">Confidence: N/A</div>
+                </div>
+                
+                <div class="chart-container">
+                    <div class="chart-grid"></div>
+                    <div class="y-axis-labels" id="yAxisLabels">
+                        <div class="y-label" style="bottom: 0%;">0%</div>
+                        <div class="y-label" style="bottom: 20%;">20%</div>
+                        <div class="y-label" style="bottom: 40%;">40%</div>
+                        <div class="y-label" style="bottom: 60%;">60%</div>
+                        <div class="y-label" style="bottom: 80%;">80%</div>
+                        <div class="y-label" style="bottom: 100%;">100%</div>
+                    </div>
+                    <div class="histogram-bars" id="histogramBars">
+                        <div class="histogram-bar" data-digit="0" style="height: 0%;">
+                            <div class="bar-label">0</div>
+                            <div class="bar-value">0.0%</div>
+                        </div>
+                        <div class="histogram-bar" data-digit="1" style="height: 0%;">
+                            <div class="bar-label">1</div>
+                            <div class="bar-value">0.0%</div>
+                        </div>
+                        <div class="histogram-bar" data-digit="2" style="height: 0%;">
+                            <div class="bar-label">2</div>
+                            <div class="bar-value">0.0%</div>
+                        </div>
+                        <div class="histogram-bar" data-digit="3" style="height: 0%;">
+                            <div class="bar-label">3</div>
+                            <div class="bar-value">0.0%</div>
+                        </div>
+                        <div class="histogram-bar" data-digit="4" style="height: 0%;">
+                            <div class="bar-label">4</div>
+                            <div class="bar-value">0.0%</div>
+                        </div>
+                        <div class="histogram-bar" data-digit="5" style="height: 0%;">
+                            <div class="bar-label">5</div>
+                            <div class="bar-value">0.0%</div>
+                        </div>
+                        <div class="histogram-bar" data-digit="6" style="height: 0%;">
+                            <div class="bar-label">6</div>
+                            <div class="bar-value">0.0%</div>
+                        </div>
+                        <div class="histogram-bar" data-digit="7" style="height: 0%;">
+                            <div class="bar-label">7</div>
+                            <div class="bar-value">0.0%</div>
+                        </div>
+                        <div class="histogram-bar" data-digit="8" style="height: 0%;">
+                            <div class="bar-label">8</div>
+                            <div class="bar-value">0.0%</div>
+                        </div>
+                        <div class="histogram-bar" data-digit="9" style="height: 0%;">
+                            <div class="bar-label">9</div>
+                            <div class="bar-value">0.0%</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="footer-content">
+            Made by <a href="https://portfolio-three-azure-83.vercel.app/" target="_blank" rel="noopener noreferrer">Rishabh Baloni</a>
+        </div>
+    </footer>
+
+    <script>
+        // Application State Management
+        class DigitRecognitionApp {
+            constructor() {
+                this.canvas = document.getElementById('drawingCanvas');
+                this.ctx = this.canvas.getContext('2d');
+                this.isDrawing = false;
+                this.strokes = [];
+                this.currentStroke = [];
+                this.history = []; // Action history for undo/redo
+                this.historyStep = -1; // Current position in history
+                this.currentTool = 'brush';
+                this.brushSize = 8;
+                this.eraserSize = 20;
+                this.brushType = 'round';
+                
+                this.initializeCanvas();
+                this.bindEvents();
+            }
+
+            // Canvas Initialization
+            initializeCanvas() {
+                // Set canvas background to white
+                this.ctx.fillStyle = 'white';
+                this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+                
+                // Set drawing properties
+                this.ctx.strokeStyle = 'black';
+                this.ctx.lineWidth = 8;
+                this.ctx.lineCap = 'round';
+                this.ctx.lineJoin = 'round';
+                
+                // Store initial brush size
+                this.brushSize = 8;
+                
+                // Initialize history with empty state
+                this.saveCanvasState();
+            }
+
+            // Brush size management
+            setBrushSize(size) {
+                this.brushSize = size;
+                this.ctx.lineWidth = size;
+            }
+
+            // Eraser size management
+            setEraserSize(size) {
+                this.eraserSize = size;
+            }
+
+            // Event Binding
+            bindEvents() {
+                // Mouse events
+                this.canvas.addEventListener('mousedown', this.startDrawing.bind(this));
+                this.canvas.addEventListener('mousemove', this.draw.bind(this));
+                this.canvas.addEventListener('mouseup', this.stopDrawing.bind(this));
+                this.canvas.addEventListener('mouseout', this.stopDrawing.bind(this));
+
+                // Touch events for mobile
+                this.canvas.addEventListener('touchstart', this.handleTouch.bind(this));
+                this.canvas.addEventListener('touchmove', this.handleTouch.bind(this));
+                this.canvas.addEventListener('touchend', this.stopDrawing.bind(this));
+            }
+
+            // Mouse/Touch Handlers
+            startDrawing(e) {
+                this.isDrawing = true;
+                
+                const rect = this.canvas.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                
+                if (this.currentTool === 'eraser') {
+                    // For eraser, save current state for undo before starting to erase
+                    this.saveCanvasState();
+                    this.eraseStrokes(x, y);
+                } else {
+                    // For brush, create new stroke
+                    this.currentStroke = [];
+                    
+                    // Set up drawing context
+                    this.ctx.lineWidth = this.brushSize;
+                    this.ctx.globalCompositeOperation = 'source-over';
+                    this.ctx.strokeStyle = 'black';
+                    this.ctx.lineCap = this.brushType === 'square' ? 'square' : 'round';
+                    this.ctx.lineJoin = this.brushType === 'square' ? 'miter' : 'round';
+                    
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(x, y);
+                    this.currentStroke.push({x, y, tool: this.currentTool, size: this.brushSize, type: this.brushType});
+                }
+            }
+
+            draw(e) {
+                if (!this.isDrawing) return;
+                
+                const rect = this.canvas.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                
+                if (this.currentTool === 'eraser') {
+                    // Eraser mode: remove strokes that intersect with eraser area
+                    this.eraseStrokes(x, y);
+                } else {
+                    // Drawing mode: add to current stroke
+                    this.ctx.lineWidth = this.brushSize;
+                    this.ctx.globalCompositeOperation = 'source-over';
+                    this.ctx.strokeStyle = 'black';
+                    this.ctx.lineCap = this.brushType === 'square' ? 'square' : 'round';
+                    this.ctx.lineJoin = this.brushType === 'square' ? 'miter' : 'round';
+                    
+                    this.ctx.lineTo(x, y);
+                    this.ctx.stroke();
+                    this.currentStroke.push({x, y, tool: this.currentTool, size: this.brushSize, type: this.brushType});
+                }
+            }
+
+            eraseStrokes(x, y) {
+                const eraserRadius = this.eraserSize / 2;
+                let strokesRemoved = false;
+                
+                // Check each stroke to see if it intersects with eraser area
+                this.strokes = this.strokes.filter(stroke => {
+                    // Check if any point in the stroke is within eraser radius
+                    const shouldKeep = !stroke.some(point => {
+                        const distance = Math.sqrt((point.x - x) ** 2 + (point.y - y) ** 2);
+                        return distance <= eraserRadius;
+                    });
+                    
+                    if (!shouldKeep) {
+                        strokesRemoved = true;
+                    }
+                    
+                    return shouldKeep;
+                });
+                
+                // If strokes were removed, redraw the canvas
+                if (strokesRemoved) {
+                    this.redrawCanvas();
+                }
+            }
+
+            redrawCanvas() {
+                // Clear the canvas
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                
+                // Redraw all remaining strokes
+                this.strokes.forEach(stroke => {
+                    if (stroke.length > 0) {
+                        this.ctx.beginPath();
+                        this.ctx.moveTo(stroke[0].x, stroke[0].y);
+                        
+                        // Use the stroke's original properties
+                        this.ctx.lineWidth = stroke[0].size || this.brushSize;
+                        this.ctx.strokeStyle = 'black';
+                        this.ctx.globalCompositeOperation = 'source-over';
+                        this.ctx.lineCap = stroke[0].type === 'square' ? 'square' : 'round';
+                        this.ctx.lineJoin = stroke[0].type === 'square' ? 'miter' : 'round';
+                        
+                        for (let i = 1; i < stroke.length; i++) {
+                            this.ctx.lineTo(stroke[i].x, stroke[i].y);
+                        }
+                        
+                        this.ctx.stroke();
+                    }
+                });
+            }
+
+            stopDrawing() {
+                if (this.isDrawing) {
+                    this.isDrawing = false;
+                    
+                    if (this.currentTool === 'eraser') {
+                        // Save state after erasing is complete
+                        this.saveCanvasState();
+                        
+                        // If canvas is now empty, hide the prediction
+                        if (this.strokes.length === 0) {
+                            this.hideResult();
+                        }
+                    } else if (this.currentStroke && this.currentStroke.length > 0) {
+                        // Only save stroke if we were actually drawing
+                        this.strokes.push([...this.currentStroke]);
+                        this.saveCanvasState(); // Save state after adding stroke
+                    }
+                }
+            }
+
+            handleTouch(e) {
+                e.preventDefault();
+                const touch = e.touches[0];
+                const mouseEvent = new MouseEvent(e.type === 'touchstart' ? 'mousedown' : 
+                                                  e.type === 'touchmove' ? 'mousemove' : 'mouseup', {
+                    clientX: touch.clientX,
+                    clientY: touch.clientY
+                });
+                this.canvas.dispatchEvent(mouseEvent);
+            }
+
+            // Canvas Management
+            saveCanvasState() {
+                // Remove any future history if we're not at the end
+                this.history = this.history.slice(0, this.historyStep + 1);
+                
+                // Save current state
+                this.history.push(this.strokes.map(stroke => [...stroke]));
+                this.historyStep++;
+                
+                // Limit history size to prevent memory issues
+                if (this.history.length > 20) {
+                    this.history.shift();
+                    this.historyStep--;
+                }
+            }
+
+            undoLastStroke() {
+                if (this.historyStep > 0) {
+                    this.historyStep--;
+                    this.strokes = this.history[this.historyStep].map(stroke => [...stroke]);
+                    this.redrawCanvas();
+                    
+                    // If no strokes left, reset prediction
+                    if (this.strokes.length === 0) {
+                        this.hideResult();
+                    }
+                }
+            }
+
+            redoLastStroke() {
+                if (this.historyStep < this.history.length - 1) {
+                    this.historyStep++;
+                    this.strokes = this.history[this.historyStep].map(stroke => [...stroke]);
+                    this.redrawCanvas();
+                    
+                    // If no strokes left, reset prediction
+                    if (this.strokes.length === 0) {
+                        this.hideResult();
+                    }
+                }
+            }
+
+            // Tool Management
+            selectTool(tool) {
+                this.currentTool = tool;
+                
+                // Update tool button states
+                document.querySelectorAll('.tool-btn').forEach(btn => btn.classList.remove('active'));
+                document.getElementById(tool + 'Tool').classList.add('active');
+                
+                // Update cursor style
+                if (tool === 'eraser') {
+                    this.canvas.style.cursor = 'crosshair';
+                } else {
+                    this.canvas.style.cursor = 'crosshair';
+                }
+            }
+
+            updateBrushSize(size) {
+                this.brushSize = parseInt(size);
+                // Always display as two digits with "px" suffix
+                document.getElementById('brushSizeDisplay').textContent = size.toString().padStart(2, '0') + 'px';
+            }
+
+            updateBrushType(type) {
+                this.brushType = type;
+            }
+
+            // Clear canvas and reset history
+            clearCanvas() {
+                this.ctx.fillStyle = 'white';
+                this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+                this.strokes = [];
+                this.currentStroke = [];
+                this.hideResult();
+                
+                // Reset history completely after clearing
+                this.history = [];
+                this.historyStep = -1;
+                this.saveCanvasState(); // Save the empty state as the first state
+            }
+
+            redrawCanvas() {
+                this.ctx.fillStyle = 'white';
+                this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+                
+                for (const stroke of this.strokes) {
+                    if (stroke.length > 0) {
+                        // Set stroke properties based on first point (or use defaults)
+                        const firstPoint = stroke[0];
+                        const strokeTool = firstPoint.tool || 'brush';
+                        const strokeSize = firstPoint.size || this.brushSize;
+                        const strokeType = firstPoint.type || 'round';
+                        
+                        // Apply tool settings
+                        this.ctx.lineWidth = strokeSize;
+                        this.ctx.lineCap = strokeType === 'square' ? 'square' : 'round';
+                        this.ctx.lineJoin = strokeType === 'square' ? 'miter' : 'round';
+                        
+                        if (strokeTool === 'eraser') {
+                            this.ctx.globalCompositeOperation = 'destination-out';
+                        } else {
+                            this.ctx.globalCompositeOperation = 'source-over';
+                            this.ctx.strokeStyle = 'black';
+                        }
+                        
+                        this.ctx.beginPath();
+                        this.ctx.moveTo(firstPoint.x, firstPoint.y);
+                        for (let i = 1; i < stroke.length; i++) {
+                            this.ctx.lineTo(stroke[i].x, stroke[i].y);
+                        }
+                        this.ctx.stroke();
+                    }
+                }
+                
+                // Reset to default composite operation
+                this.ctx.globalCompositeOperation = 'source-over';
+            }
+
+            // Check if canvas is empty (only white pixels)
+            isCanvasEmpty() {
+                // If no strokes recorded, canvas is definitely empty
+                if (this.strokes.length === 0) {
+                    return true;
+                }
+                
+                // Additional pixel-level check for edge cases
+                const canvas = document.getElementById('drawingCanvas');
+                const ctx = canvas.getContext('2d');
+                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                const pixels = imageData.data;
+                
+                // Check if all pixels are white (255, 255, 255, 255)
+                for (let i = 0; i < pixels.length; i += 4) {
+                    const r = pixels[i];
+                    const g = pixels[i + 1];
+                    const b = pixels[i + 2];
+                    const a = pixels[i + 3];
+                    
+                    // If any pixel is not white, canvas has content
+                    if (r !== 255 || g !== 255 || b !== 255 || a !== 255) {
+                        return false;
+                    }
+                }
+                
+                return true;
+            }
+
+            // Show temporary message to user
+            showMessage(message, type = 'info') {
+                // Create message element if it doesn't exist
+                let messageEl = document.getElementById('canvas-message');
+                if (!messageEl) {
+                    messageEl = document.createElement('div');
+                    messageEl.id = 'canvas-message';
+                    messageEl.style.cssText = `
+                        position: absolute;
+                        top: 50%;
+                        left: 50%;
+                        transform: translate(-50%, -50%);
+                        background: rgba(0, 0, 0, 0.8);
+                        color: white;
+                        padding: 1rem 1.5rem;
+                        border-radius: 8px;
+                        font-size: 0.9rem;
+                        z-index: 1000;
+                        opacity: 0;
+                        transition: opacity 0.3s ease;
+                        pointer-events: none;
+                    `;
+                    document.querySelector('.canvas-wrapper').style.position = 'relative';
+                    document.querySelector('.canvas-wrapper').appendChild(messageEl);
+                }
+                
+                messageEl.textContent = message;
+                messageEl.style.opacity = '1';
+                
+                // Hide message after 2 seconds
+                setTimeout(() => {
+                    messageEl.style.opacity = '0';
+                }, 2000);
+            }
+
+            // Prediction
+            async predictDigit() {
+                // Check if canvas is empty before making prediction
+                if (this.isCanvasEmpty()) {
+                    this.showMessage('Please draw a digit first!', 'warning');
+                    return;
+                }
+                
+                const canvas = document.getElementById('drawingCanvas');
+                const dataURL = canvas.toDataURL('image/png');
+                
+                try {
+                    const response = await fetch('/predict', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            image: dataURL
+                        })
+                    });
+                    
+                    if (response.ok) {
+                        const data = await response.json();
+                        this.displayPrediction(data);
+                    } else {
+                        console.error('Prediction failed');
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                }
+            }
+
+            // Results Display
+            displayPrediction(data) {
+                console.log('Prediction result:', data);
+                console.log('data.digit:', data.digit, 'data.predicted_digit:', data.predicted_digit);
+                
+                // Update prediction result box with active state
+                const resultBox = document.getElementById('predictionResult');
+                const labelElement = document.getElementById('bigPredictedDigit');
+                const confidenceElement = document.getElementById('bigConfidenceValue');
+                
+                // Remove placeholder state and add active state
+                resultBox.classList.remove('placeholder');
+                resultBox.classList.add('active');
+                labelElement.classList.remove('placeholder');
+                confidenceElement.classList.remove('placeholder');
+                
+                // Show actual prediction result - handle zero properly
+                const predictedDigit = data.digit !== undefined ? data.digit : data.predicted_digit;
+                labelElement.textContent = `Predicted: ${predictedDigit}`;
+                confidenceElement.textContent = `Confidence: ${(data.confidence * 100).toFixed(1)}%`;
+                
+                // Update histogram
+                this.updateHistogram(data);
+                
+                // Add haptic feedback if available
+                if (navigator.vibrate) {
+                    navigator.vibrate(50);
+                }
+            }
+
+            updateHistogram(data) {
+                const bars = document.querySelectorAll('.histogram-bar');
+                const probabilities = data.all_predictions || [];
+                
+                // Use fixed 0-100% scale (no auto-scaling)
+                // Ensure data is in 0-1 range and convert to percentage
+                bars.forEach((bar, index) => {
+                    const probability = probabilities[index] || 0;
+                    
+                    // Handle both 0-1 range and 0-100 range data
+                    let percentage;
+                    if (probability <= 1) {
+                        // Data is in 0-1 range, multiply by 100
+                        percentage = probability * 100;
+                    } else {
+                        // Data is already in 0-100 range
+                        percentage = probability;
+                    }
+                    
+                    // Clamp to 0-100% range for safety
+                    percentage = Math.max(0, Math.min(100, percentage));
+                    
+                    // Set bar height exactly to percentage value
+                    bar.style.height = `${percentage}%`;
+                    
+                    const valueElement = bar.querySelector('.bar-value');
+                    if (valueElement) {
+                        valueElement.textContent = `${percentage.toFixed(1)}%`;
+                    }
+                    
+                    // Reset classes
+                    bar.classList.remove('predicted');
+                    
+                    // Highlight the predicted digit - handle zero properly
+                    const predictedDigit = data.digit !== undefined ? data.digit : data.predicted_digit;
+                    console.log('Predicted digit:', predictedDigit, 'Current bar index:', index);
+                    if (index === parseInt(predictedDigit)) {
+                        console.log('Adding predicted class to bar', index);
+                        bar.classList.add('predicted');
+                    }
+                });
+            }
+
+            hideResult() {
+                // Restore placeholder state
+                const resultBox = document.getElementById('predictionResult');
+                const labelElement = document.getElementById('bigPredictedDigit');
+                const confidenceElement = document.getElementById('bigConfidenceValue');
+                
+                // Add placeholder state and remove active state
+                resultBox.classList.add('placeholder');
+                resultBox.classList.remove('active');
+                labelElement.classList.add('placeholder');
+                confidenceElement.classList.add('placeholder');
+                
+                // Set placeholder text
+                labelElement.textContent = 'Predicted: None';
+                confidenceElement.textContent = 'Confidence: N/A';
+                
+                // Reset histogram
+                const bars = document.querySelectorAll('.histogram-bar');
+                bars.forEach(bar => {
+                    bar.style.height = '0%';
+                    bar.classList.remove('predicted');
+                    const valueElement = bar.querySelector('.bar-value');
+                    if (valueElement) {
+                        valueElement.textContent = '0.0%';
+                    }
+                });
+            }
+        }
+
+        // Global variables and functions
+        let app;
+
+        function initializeApp() {
+            app = new DigitRecognitionApp();
+            console.log('🚀 Digit Recognition App initialized!');
+        }
+
+        function clearCanvas() {
+            app.clearCanvas();
+        }
+
+        function predictDigit() {
+            app.predictDigit();
+        }
+
+        function undoLastStroke() {
+            app.undoLastStroke();
+        }
+
+        function redoLastStroke() {
+            app.redoLastStroke();
+        }
+
+        function selectTool(tool) {
+            app.selectTool(tool);
+        }
+
+        function updateBrushSize(size) {
+            app.updateBrushSize(parseInt(size));
+        }
+
+        function updateBrushType(type) {
+            app.updateBrushType(type);
+        }
+
+        // Test function to verify chart scaling with known values
+        function testChartScaling() {
+            // Test with known percentages: 0, 20, 40, 60, 80, 100
+            const testData = {
+                digit: 5,
+                confidence: 1.0,
+                all_predictions: [0.0, 0.2, 0.4, 0.6, 0.8, 1.0, 0.0, 0.0, 0.0, 0.0]
+            };
+            
+            app.displayPrediction(testData);
+            console.log('📊 Chart test: Each bar should align exactly with its tick mark');
+            console.log('0→0%, 1→20%, 2→40%, 3→60%, 4→80%, 5→100%');
+        }
+
+        // Initialize app when page loads
+        document.addEventListener('DOMContentLoaded', initializeApp);
+
+        // Add keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'c' && (e.ctrlKey || e.metaKey)) {
+                e.preventDefault();
+                clearCanvas();
+            } else if (e.key === 'Enter') {
+                e.preventDefault();
+                predictDigit();
+            } else if (e.key === 'z' && (e.ctrlKey || e.metaKey)) {
+                e.preventDefault();
+                undoLastStroke();
+            } else if (e.key === 't' && (e.ctrlKey || e.metaKey)) {
+                e.preventDefault();
+                testChartScaling();
+            }
+        });
+    </script>
+</body>
+</html>

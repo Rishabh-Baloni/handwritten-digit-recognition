@@ -18,6 +18,20 @@ var/
 wheels/
 *.egg-info/
 .installed.cfg
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+*.ipynb_checkpoints/
+
+# Dataset files (if downloaded locally)
+*.gz
+*.zip
+*.tar*
+*.idx*
+*.ubyte
+mnist/
+MNIST/
+data/
 *.egg
 MANIFEST
 

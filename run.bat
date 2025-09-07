@@ -1,7 +1,10 @@
 @echo off
 echo ========================================
-echo  Handwritten Digit Recognition Setup
+echo   Handwritten Digit Recognition Setup
 echo ========================================
+echo.
+echo The app will open in your default browser.
+echo If it doesn't open automatically, go to: http://localhost:5000
 echo.
 
 REM Check if Python is installed
@@ -63,14 +66,14 @@ echo  in virtual environment (venv folder)
 echo =======================================
 echo.
 echo The app will open in your default browser.
-echo If it doesn't open automatically, go to: http://localhost:8501
+echo If it doesn't open automatically, go to: http://localhost:5000
 echo.
 echo Press Ctrl+C to stop the application.
 echo To run again, just double-click this file.
 echo.
 
-REM Run the Streamlit app in virtual environment
-streamlit run app.py
+REM Run the Flask app in virtual environment
+python app.py
 
 echo.
 echo Application stopped.

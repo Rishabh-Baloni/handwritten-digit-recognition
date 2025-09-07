@@ -1,143 +1,133 @@
-import streamlit as st
+from flask import Flask, render_template, request, jsonify
 import numpy as np
 import tensorflow as tf
 from PIL import Image, ImageOps
 import io
-from streamlit_drawable_canvas import st_canvas
+import base64
+import os
 
-# Configure the page
-st.set_page_config(
-    page_title="Handwritten Digit Recognition",
-    page_icon="🔢",
-    layout="centered"
-)
+app = Flask(__name__)
 
-# Load the model
-@st.cache_resource
+# Load the model once when the app starts
+model = None
+
 def load_model():
     """Load the trained model"""
+    global model
     try:
-        model = tf.keras.models.load_model('my_model.keras')
-        return model
+        # Try different loading methods for compatibility
+        try:
+            model = tf.keras.models.load_model('my_model.keras')
+        except Exception as e1:
+            print(f"First loading attempt failed: {e1}")
+            try:
+                # Try loading with compile=False
+                model = tf.keras.models.load_model('my_model.keras', compile=False)
+            except Exception as e2:
+                print(f"Second loading attempt failed: {e2}")
+                # Try loading with custom objects
+                model = tf.keras.models.load_model('my_model.keras', compile=False, safe_mode=False)
+        
+        print("Model loaded successfully!")
+        print(f"Model input shape: {model.input_shape}")
+        print(f"Model output shape: {model.output_shape}")
+        return True
     except Exception as e:
-        st.error(f"Error loading model: {e}")
+        print(f"Error loading model: {e}")
+        return False
+
+def preprocess_canvas_image(image_data):
+    """Preprocess the canvas image for prediction"""
+    try:
+        # Remove the data URL prefix (data:image/png;base64,)
+        image_data = image_data.split(',')[1]
+        
+        # Decode base64 to image
+        image_bytes = base64.b64decode(image_data)
+        image = Image.open(io.BytesIO(image_bytes))
+        
+        print(f"DEBUG: Original image size: {image.size}, mode: {image.mode}")
+        
+        # Convert to grayscale
+        image = image.convert('L')
+        
+        # Resize to 28x28
+        image = image.resize((28, 28), Image.Resampling.LANCZOS)
+        
+        # Convert to numpy array
+        img_array = np.array(image)
+        
+        # The canvas has white background with black drawings
+        # MNIST expects white digits on black background, so we need to invert
+        img_array = 255 - img_array
+        
+        # Normalize to 0-1 range
+        img_array = img_array.astype('float32') / 255.0
+        
+        # Add batch and channel dimensions
+        img_array = img_array.reshape(1, 28, 28, 1)
+        
+        return img_array
+    except Exception as e:
+        print(f"Error preprocessing image: {e}")
         return None
 
-def preprocess_image(image_data):
-    """Preprocess the drawn image for prediction"""
-    if image_data is None:
-        return None
-    
-    # Convert to PIL Image
-    img = Image.fromarray(image_data.astype('uint8'), 'RGBA')
-    
-    # Convert to grayscale
-    img = img.convert('L')
-    
-    # Invert colors (make background black, drawing white)
-    img = ImageOps.invert(img)
-    
-    # Resize to 28x28
-    img = img.resize((28, 28), Image.Resampling.LANCZOS)
-    
-    # Convert to numpy array
-    img_array = np.array(img)
-    
-    # Normalize to 0-1 range
-    img_array = img_array.astype('float32') / 255.0
-    
-    # Add batch dimension
-    img_array = img_array.reshape(1, 28, 28, 1)
-    
-    return img_array
+@app.route('/')
+def index():
+    """Serve the main page"""
+    return render_template('index.html')
 
-def predict_digit(model, image_array):
-    """Make prediction on the preprocessed image"""
-    if model is None or image_array is None:
-        return None, None
+@app.route('/predict', methods=['POST'])
+def predict():
+    """Handle prediction requests"""
+    try:
+        # Get the image data from the request
+        data = request.get_json()
+        image_data = data.get('image')
+        
+        if not image_data:
+            return jsonify({'error': 'No image data provided'}), 400
+        
+        # Preprocess the image
+        processed_image = preprocess_canvas_image(image_data)
+        
+        if processed_image is None:
+            return jsonify({'error': 'Failed to process image'}), 400
+        
+        # Make prediction
+        if model is None:
+            return jsonify({'error': 'Model not loaded'}), 500
+        
+        prediction = model.predict(processed_image)
+        predicted_digit = int(np.argmax(prediction))
+        confidence = float(np.max(prediction))
+        
+        # Get all predictions for confidence chart
+        all_predictions = prediction[0].tolist()
+        
+        return jsonify({
+            'digit': predicted_digit,
+            'confidence': confidence,
+            'all_predictions': all_predictions
+        })
     
-    prediction = model.predict(image_array)
-    predicted_digit = np.argmax(prediction)
-    confidence = np.max(prediction)
-    
-    return predicted_digit, confidence
+    except Exception as e:
+        print(f"Error in prediction: {e}")
+        return jsonify({'error': str(e)}), 500
 
-# Main app
-def main():
-    st.title("🔢 Handwritten Digit Recognition")
-    st.write("Draw a digit (0-9) in the canvas below and get instant predictions!")
-    
-    # Load model
-    model = load_model()
-    
-    if model is None:
-        st.error("Failed to load the model. Please check if 'my_model.keras' exists.")
-        return
-    
-    # Create two columns
-    col1, col2 = st.columns([2, 1])
-    
-    with col1:
-        st.subheader("Draw Here:")
-        
-        # Create canvas
-        canvas_result = st_canvas(
-            fill_color="rgba(255, 255, 255, 0.0)",  # Transparent fill
-            stroke_width=20,
-            stroke_color="black",
-            background_color="white",
-            height=280,
-            width=280,
-            drawing_mode="freedraw",
-            key="canvas",
-        )
-    
-    with col2:
-        st.subheader("Prediction:")
-        
-        if canvas_result.image_data is not None:
-            # Preprocess the image
-            processed_image = preprocess_image(canvas_result.image_data)
-            
-            if processed_image is not None:
-                # Make prediction
-                digit, confidence = predict_digit(model, processed_image)
-                
-                if digit is not None:
-                    # Display prediction
-                    st.markdown(f"""
-                    <div style="text-align: center; padding: 20px; background-color: #f0f2f6; border-radius: 10px; margin: 10px 0;">
-                        <h1 style="color: #1f77b4; font-size: 3em; margin: 0;">{digit}</h1>
-                        <p style="color: #666; margin: 5px 0;">Confidence: {confidence:.1%}</p>
-                    </div>
-                    """, unsafe_allow_html=True)
-                    
-                    # Show confidence bar
-                    st.progress(confidence)
-                    
-                    # Show processed image (for debugging)
-                    with st.expander("View Processed Image"):
-                        processed_img_display = processed_image[0, :, :, 0]
-                        st.image(processed_img_display, caption="28x28 processed image", width=140)
-        
-        # Clear button
-        if st.button("Clear Canvas", type="secondary"):
-            st.rerun()
-    
-    # Instructions
-    st.markdown("---")
-    st.markdown("""
-    **Instructions:**
-    1. Draw a single digit (0-9) in the canvas
-    2. Make sure the digit is centered and clearly visible
-    3. The model will predict the digit in real-time
-    4. Use the "Clear Canvas" button to start over
-    
-    **Tips for better predictions:**
-    - Draw digits similar to how they appear in handwritten text
-    - Make sure the digit fills most of the canvas
-    - Use clear, bold strokes
-    """)
+@app.route('/health')
+def health():
+    """Health check endpoint"""
+    return jsonify({
+        'status': 'healthy',
+        'model_loaded': model is not None
+    })
 
-if __name__ == "__main__":
-    main()
+if __name__ == '__main__':
+    # Load the model
+    if load_model():
+        print("Starting Flask app...")
+        print("Open your browser and go to: http://localhost:5000")
+        app.run(debug=True, host='0.0.0.0', port=5000)
+    else:
+        print("Failed to load model. Please check if 'my_model.keras' exists.")
