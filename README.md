@@ -226,9 +226,10 @@ This project is open source and available under the [MIT License](LICENSE).
 
 If you encounter any issues or have questions:
 
-1. Check the [Issues](https://github.com/yourusername/handwritten-digit-recognition/issues) page
-2. Create a new issue if your problem isn't already reported
-3. Provide detailed information about your environment and the issue
+1. **Check the documentation** - Review the setup instructions and troubleshooting tips above
+2. **Verify your environment** - Ensure Python 3.8+ and all dependencies are properly installed
+3. **Common solutions** - Try recreating the virtual environment or reinstalling requirements
+4. **Contact the developer** - Reach out via the repository for technical assistance
 
 ## ⭐ Acknowledgments
 
